@@ -1,7 +1,8 @@
 # Query Analyzer Chrome Extension
 
 A Chrome extension that automatically detects and analyzes queries for controversial topics using ChatGPT. The extension provides real-time analysis of search queries and selected text, identifying controversial viewpoints and potential manipulation.
-
+![Alt text](neuroleptics.png)
+![Alt text](hardware_security.png)
 ## Features
 
 - **Automatic Query Detection**: Monitors search inputs and form submissions across websites

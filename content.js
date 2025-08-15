@@ -363,16 +363,30 @@ function insertAnalysisAsSearchResult(query, data) {
   
   if (isControversial && data.controversialViewpoints && data.controversialViewpoints.length > 0) {
     console.log("setting html to viewpoints greater than 1");
+    console.log("Raw viewpoints data:", data.controversialViewpoints);
+    
     html += `
       <div style="margin-bottom: 20px;">
         <h4 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">Different Viewpoints:</h4>
         <div style="font-size: 14px; color: #555; line-height: 1.6;">
-          ${data.controversialViewpoints.map((viewpoint, index) => 
-            `<div style="margin-bottom: 15px; padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff; border-radius: 4px;">
+          ${data.controversialViewpoints.map((viewpoint, index) => {
+            // Handle both string and object formats
+            let viewpointText = viewpoint;
+            if (typeof viewpoint === 'object' && viewpoint !== null) {
+              // If it's an object, try to extract text from common properties
+              viewpointText = viewpoint.text || viewpoint.content || viewpoint.viewpoint || viewpoint.message || JSON.stringify(viewpoint);
+              console.log(`Viewpoint ${index + 1} was an object, extracted:`, viewpointText);
+            } else if (typeof viewpoint !== 'string') {
+              // If it's not a string, convert it
+              viewpointText = String(viewpoint);
+              console.log(`Viewpoint ${index + 1} was not a string, converted:`, viewpointText);
+            }
+            
+            return `<div style="margin-bottom: 15px; padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff; border-radius: 4px;">
               <strong style="color: #007bff;">Viewpoint ${index + 1}:</strong><br>
-              ${viewpoint}
-            </div>`
-          ).join('')}
+              ${viewpointText}
+            </div>`;
+          }).join('')}
         </div>
       </div>
     `;
