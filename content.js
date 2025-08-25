@@ -39,7 +39,7 @@ function addExtensionIndicator() {
     indicator.style.cssText = `
       position: fixed;
       top: 10px;
-      left: 10px;
+      right: 10px;
       background: #007bff;
       color: white;
       padding: 5px 10px;
