@@ -40,20 +40,20 @@ async function checkControversialTopic(query) {
     throw new Error('OpenAI API key not set. Please set it in the extension popup.');
   }
 
-  const prompt = `Analyze the following query to provide different perspectives on the topic.
+  const prompt = `Analyze the following query to determine if it's about a controversial topic. 
   
 Query: "${query}"
 
 Please respond with a JSON object containing:
-1. "isControversial": boolean - whether the topic has different perspectives
+1. "isControversial": boolean - whether the topic has different perspectives where people do not agree
 2. "confidence": number (0-1) - confidence level in the assessment
-3. "controversialViewpoints": array of 2-3 STRINGS - each viewpoint should be 2-3 sentences long arguing from different perspectives. Each viewpoint must be a simple text string, not an object. Use the strongest language possible and arguments. Each viewpoint should be from the perspective of the advocate. And criticize the language of the query if relevant. Bring up the names of the individuals who argue for each perspective as prominent critics. Give which one has the strongest viewpoint best critical analysis. Give specific arguments and alight the user to the strongest arguments 
+3. "controversialViewpoints": array of 2-3 STRINGS - each viewpoint should be 3-4 sentences long arguing vigorously from each perspective. Each viewpoint must be a simple text string, not an object. Argue from the perspective of advocates such as privacy advocate, human rights advocate, security advocate, etc. Use the strongest language possible and arguments. Each viewpoint should be from the perspective of the advocate. And criticize the language of the query if relevant. Bring up the names of the individuals who argue for each perspective as prominent critics. Give which one has the strongest viewpoint best critical analysis. Give specific arguments and alight the user to the strongest arguments 
 4. "manipulationDetected": boolean - whether there are signs of manipulation in the query
 5. "manipulationIndicators": array of strings - specific indicators of potential manipulation
 
 IMPORTANT: The "controversialViewpoints" must be an array of simple text strings, not objects. Each viewpoint should be a single string containing the full argument.
 
-Return to me different viewpoints on this topic. Argue vigorously from each perspective. Indicate if there is manipulation in the query.`;
+Return to me if the following query is of a controversial nature. Argue vigorously from each perspective. Indicate if there is manipulation in the query.`;
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
