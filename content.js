@@ -60,37 +60,27 @@ function addExtensionIndicator() {
   }
 }
 
-// Function to create and show the analysis overlay
-function createAnalysisOverlay() {
-  const overlay = document.createElement('div');
-  overlay.id = 'controversial-checker-overlay';
-  overlay.style.cssText = `
-    position: absolute;
-    width: 100%;
-    background: white;
-    border: 2px solid #007bff;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    z-index: 10000;
-    font-family: Arial, sans-serif;
-    overflow-y: auto;
+// Function to create loading indicator
+function createLoadingIndicator() {
+  const loading = document.createElement('div');
+  loading.id = 'loading';
+  loading.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    z-index: 10001;
     display: none;
-    margin-top: 5px;
-    max-height: 400px;
-    overflow-y: auto;
   `;
   
-  overlay.innerHTML = `
-    <div style="padding: 12px; border-bottom: 1px solid #eee; background: #f8f9fa;">
-      <h3 style="margin: 0; color: #333; font-size: 14px;">🔍 Query Analysis</h3>
-      <button id="close-overlay" style="position: absolute; top: 8px; right: 8px; background: none; border: none; font-size: 16px; cursor: pointer; color: #666;">×</button>
-    </div>
-    <div id="analysis-content" style="padding: 12px;">
-      <div id="loading" style="text-align: center; display: none;">
-        <p style="margin: 0; font-size: 13px;">Analyzing query...</p>
-        <div style="width: 16px; height: 16px; border: 2px solid #f3f3f3; border-top: 2px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin: 8px auto;"></div>
-      </div>
-      <div id="results" style="display: none;"></div>
+  loading.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="width: 12px; height: 12px; border: 2px solid #f3f3f3; border-top: 2px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+      <span>Analyzing...</span>
     </div>
     <style>
       @keyframes spin {
@@ -100,70 +90,10 @@ function createAnalysisOverlay() {
     </style>
   `;
   
-  document.body.appendChild(overlay);
-  
-  // Close button functionality
-  document.getElementById('close-overlay').addEventListener('click', () => {
-    overlay.style.display = 'none';
-  });
-  
-  return overlay;
+  document.body.appendChild(loading);
+  return loading;
 }
 
-// Function to position overlay underneath search input
-function positionOverlayUnderSearch(overlay, searchInput) {
-  if (!searchInput) {
-    // Fallback positioning if no search input found
-    overlay.style.position = 'fixed';
-    overlay.style.top = '100px';
-    overlay.style.left = '50%';
-    overlay.style.transform = 'translateX(-50%)';
-    overlay.style.width = '600px';
-    overlay.style.maxWidth = '90vw';
-    return;
-  }
-
-  const rect = searchInput.getBoundingClientRect();
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-  
-  // Find the best positioning target to align with search results
-  const positioningTarget = findBestPositioningTarget();
-  let left, width;
-  
-  if (positioningTarget && positioningTarget !== document.body) {
-    const targetRect = positioningTarget.getBoundingClientRect();
-    left = targetRect.left + scrollLeft;
-    width = targetRect.width;
-    console.log('Query Analyzer: Aligning with positioning target:', { targetRect, left, width });
-  } else {
-    // Fallback to search input positioning
-    left = rect.left + scrollLeft;
-    width = Math.max(rect.width, 400);
-    console.log('Query Analyzer: Using search input positioning as fallback');
-  }
-  
-  // Use fixed positioning to avoid overlapping with existing content
-  overlay.style.position = 'fixed';
-  overlay.style.top = (rect.bottom + 10) + 'px'; // 10px below search bar
-  overlay.style.left = left + 'px';
-  overlay.style.width = width + 'px';
-  overlay.style.maxWidth = width + 'px';
-  overlay.style.zIndex = '10000';
-  
-  // Ensure the overlay is visible
-  overlay.style.display = 'block';
-  
-  // Debug logging
-  console.log('Query Analyzer: Final overlay positioning:', { 
-    top: rect.bottom + 10, 
-    left, 
-    width, 
-    searchInputRect: rect,
-    scrollTop,
-    scrollLeft 
-  });
-}
 
 // Function to analyze a query
 async function analyzeQuery(query, searchInput) {
@@ -172,20 +102,12 @@ async function analyzeQuery(query, searchInput) {
   isAnalyzing = true;
   currentSearchInput = searchInput;
   
-  let overlay = document.getElementById('controversial-checker-overlay');
-  if (!overlay) {
-    overlay = createAnalysisOverlay();
+  let loading = document.getElementById('loading');
+  if (!loading) {
+    loading = createLoadingIndicator();
   }
   
-  // Position overlay underneath the search input
-  positionOverlayUnderSearch(overlay, searchInput);
-  
-  const loading = document.getElementById('loading');
-  const results = document.getElementById('results');
-  
-  overlay.style.display = 'block';
   loading.style.display = 'block';
-  results.style.display = 'none';
   
   try {
     const response = await chrome.runtime.sendMessage({
@@ -196,10 +118,10 @@ async function analyzeQuery(query, searchInput) {
     if (response.success) {
       displayResults(response.data, query);
     } else {
-      displayError(response.error);
+      console.error('Query Analyzer: Error analyzing query:', response.error);
     }
   } catch (error) {
-    displayError('Failed to analyze query: ' + error.message);
+    console.error('Query Analyzer: Failed to analyze query:', error.message);
   } finally {
     isAnalyzing = false;
     loading.style.display = 'none';
@@ -210,93 +132,24 @@ async function analyzeQuery(query, searchInput) {
 function displayResults(data, query) {
   console.log('Query Analyzer: Displaying results for query:', query);
   
-  // Try to insert as a search result first
+  const isControversial = data.isControversial;
+  
+  // Don't display anything if the query is non-controversial
+  if (!isControversial) {
+    console.log('Query Analyzer: Query is non-controversial, not displaying results');
+    return;
+  }
+  
+  // Only show results for controversial topics
   const inserted = insertAnalysisAsSearchResult(query, data);
   
   if (inserted) {
     console.log('Query Analyzer: Successfully inserted analysis as search result');
-    // Hide the old overlay if it exists
-    const overlay = document.getElementById('controversial-checker-overlay');
-    if (overlay) {
-      overlay.style.display = 'none';
-    }
   } else {
-    console.log('Query Analyzer: Failed to insert as search result, using overlay fallback');
-    // Fallback to overlay display
-    const results = document.getElementById('results');
-    const isControversial = data.isControversial;
-    const confidence = Math.round(data.confidence * 100);
-    
-    // Update overlay border color based on controversial status
-    const overlay = document.getElementById('controversial-checker-overlay');
-    if (overlay) {
-      overlay.style.borderColor = isControversial ? '#ff6b6b' : '#51cf66';
-    }
-    
-    // Always show the overlay, regardless of controversial status
-    let html = `
-      <div style="margin-bottom: 12px;">
-        <div style="display: flex; align-items: center; margin-bottom: 8px;">
-          <span style="font-weight: bold; margin-right: 8px; font-size: 12px;">Status:</span>
-          <span style="padding: 3px 6px; border-radius: 3px; background: ${isControversial ? '#ff6b6b' : '#51cf66'}; color: white; font-size: 11px;">
-            ${isControversial ? 'Controversial' : 'Non-Controversial'} (${confidence}% confidence)
-          </span>
-        </div>
-      </div>
-    `;
-    
-    if (isControversial && data.controversialViewpoints && data.controversialViewpoints.length > 0) {
-      console.log("setting html to viewpoints greater than 1")
-      html += `
-        <div style="margin-bottom: 12px;">
-          <h5 style="margin: 0 0 6px 0; color: #333; font-size: 12px;">Different Viewpoints:</h5>
-          <div style="font-size: 11px; color: #555; line-height: 1.4;">
-            ${data.controversialViewpoints.map((viewpoint, index) => 
-              `<div style="margin-bottom: 8px; padding: 6px; background: #f8f9fa; border-left: 3px solid #007bff; border-radius: 2px;">
-                <strong>Viewpoint ${index + 1}:</strong> ${viewpoint}
-              </div>`
-            ).join('')}
-          </div>
-        </div>
-      `;
-    } else if (!isControversial) {
-      html += `
-        <div style="margin-bottom: 12px;">
-          <div style="padding: 8px; background: #f0f8f0; border-left: 3px solid #51cf66; border-radius: 2px; font-size: 11px; color: #2d5a2d;">
-            <strong>Analysis:</strong> This query appears to be on a non-controversial topic. The content is generally accepted and doesn't present significant opposing viewpoints or contentious issues.
-          </div>
-        </div>
-      `;
-    }
-    
-    if (data.manipulationDetected && data.manipulationIndicators && data.manipulationIndicators.length > 0) {
-      html += `
-        <div style="margin-bottom: 12px;">
-          <h5 style="margin: 0 0 6px 0; color: #ff6b6b; font-size: 12px;">⚠️ Manipulation Detected:</h5>
-          <ul style="margin: 0; padding-left: 16px; font-size: 11px; color: #ff6b6b;">
-            ${data.manipulationIndicators.map(indicator => `<li>${indicator}</li>`).join('')}
-          </ul>
-        </div>
-      `;
-    }
-    console.log(results)
-    results.innerHTML = html;
-    console.log(results)
-
-    results.style.display = 'block';
+    console.log('Query Analyzer: Failed to insert as search result');
   }
 }
 
-// Function to display error
-function displayError(error) {
-  const results = document.getElementById('results');
-  results.innerHTML = `
-    <div style="color: #ff6b6b; text-align: center; font-size: 11px;">
-      <p>❌ Error: ${error}</p>
-    </div>
-  `;
-  results.style.display = 'block';
-}
 
 // Function to insert analysis as a search result
 function insertAnalysisAsSearchResult(query, data) {
@@ -581,17 +434,6 @@ function findAndAnalyzeQuery(query) {
   }
 }
 
-// Function to reposition overlay on scroll/resize
-function repositionOverlay() {
-  const overlay = document.getElementById('controversial-checker-overlay');
-  if (overlay && overlay.style.display !== 'none' && currentSearchInput) {
-    positionOverlayUnderSearch(overlay, currentSearchInput);
-  }
-}
-
-// Add event listeners for repositioning
-window.addEventListener('scroll', repositionOverlay);
-window.addEventListener('resize', repositionOverlay);
 
 // Function to check if we're on a search results page and analyze if needed
 function checkCurrentPage() {
